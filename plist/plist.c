@@ -44,8 +44,9 @@ static int __init plist_init(void)
 	
 	if (IS_ERR(plist_task)) {
 		printk("Unable to start kernel thread.\n");
-      	err = PTR_ERR(plist_task);
-      	return err;
+		err = PTR_ERR(plist_task);
+		plist_task = NULL;
+		return err;
 	}
 	
 	printk(KERN_DEBUG "plist_task is created, pid=%d", task_pid_nr(plist_task));
