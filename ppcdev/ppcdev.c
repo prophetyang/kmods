@@ -2,6 +2,7 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/fs.h>
+#include <linux/device.h>
 
 #include "ppcdev.h"
 
@@ -9,13 +10,16 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Prophet Yang (prophet0321@gmail.com)");
 MODULE_DESCRIPTION("Implement ppcdev");
 
-const static char *device_name = "ppcdev";
-const static int dev_minor_num = 0;
-const static int dev_elements = 1;
-static int dev_major_num = 0;
-dev_t dev_num;
+const static char *ppcdev_device_name = "ppcdev";
+const static int ppcdev_device_minor = 0;
+const static int ppcdev_max_devices = 1;
 
-ppcdev_t ppcdev;
+static int ppcdev_device_major = 0;
+static struct class *ppcdev_class = NULL;
+static struct device *ppcdev_device = NULL;
+static dev_t dev_num = 0;
+
+ppcdev_t ppcdev;	
 
 static int ppcdev_fops_open(struct inode *inode, struct file *filp) {
 	return 0;
@@ -49,39 +53,71 @@ static int ppcdev_setup(ppcdev_t *dev, dev_t major) {
 	return cdev_add(&dev->cdev, major, 1);
 }
 
-static int __init ppcdev_init(void)
+static void ppcdev_cleanup(void) {
+	/* clear cdev first */
+	cdev_del(&ppcdev.cdev);
+
+	/* destroy device */
+	if (ppcdev_device && ppcdev_class) {
+		device_destroy(ppcdev_class, dev_num);
+	}
+	
+	/* destroy class */
+	if (ppcdev_class) {
+		class_destroy(ppcdev_class);
+	}
+
+	/* unregister char device region */
+	unregister_chrdev_region(dev_num, ppcdev_max_devices);
+
+	printk(KERN_INFO "[PPDEV] Cleaning up %s module.\n", ppcdev_device_name);
+}
+
+static int __init ppcdev_module_init(void)
 {
 	int rc = 0;
 	
 	/* Let kernel assign major number for us since we don't want to specify it in our device */
-	if ((rc = alloc_chrdev_region(&dev_num, dev_minor_num, dev_elements, device_name)) < 0) {
-		printk(KERN_ERR "Allocate major number for device %s failed: rc=%d\n", device_name, rc);
+	if ((rc = alloc_chrdev_region(&dev_num, ppcdev_device_minor, ppcdev_max_devices, ppcdev_device_name)) < 0) {
+		printk(KERN_ERR "[PPCDEV] Allocate major number for device %s failed: rc=%d\n", ppcdev_device_name, rc);
 		return rc;
 	}
 	
 	/* get major number */
-	dev_major_num = MAJOR(dev_num);
+	ppcdev_device_major = MAJOR(dev_num);
 
-	printk(KERN_INFO "[PPDEV] device %s is created successfully. (run mknod /dev/%s c %d %d)\n", 
-			device_name, device_name, dev_major_num, dev_minor_num);
-	
-	/* TODO: use class_create() to create ppcdev in /sys/class */
-	/* TODO: use device_create() to create ppcdev /dev */
+	/* create /sys/class/ppcdev */
+	ppcdev_class = class_create(THIS_MODULE, ppcdev_device_name);
+	if (PTR_ERR_OR_ZERO(ppcdev_class)) {
+		unregister_chrdev_region(dev_num, ppcdev_max_devices);
+		printk(KERN_ERR "[PPDEV] Create class for device %s failed\n", ppcdev_device_name);
+		return -EFAULT;
+	}
 
-	if ((rc = ppcdev_setup(&ppcdev, dev_major_num)) < 0) {
-		printk(KERN_ERR "device %s setup failed: rc=%d\n", device_name, rc);
+	/* create /dev/ppcdev */
+	ppcdev_device = device_create(ppcdev_class, NULL, dev_num, NULL, ppcdev_device_name);
+	if (PTR_ERR_OR_ZERO(ppcdev_device)) {
+		class_destroy(ppcdev_class); 
+		unregister_chrdev_region(dev_num, ppcdev_max_devices);
+		printk(KERN_ERR "[PPDEV] Create device for device %s failed\n", ppcdev_device_name);
+		return -EFAULT;
+	}
+
+	if ((rc = ppcdev_setup(&ppcdev, ppcdev_device_major)) < 0) {
+		printk(KERN_ERR "[PPDEV] device %s setup failed: rc=%d\n", ppcdev_device_name, rc);
 		return rc;
 	}
+
+	printk(KERN_INFO "[PPDEV] device /dev/%s is created successfully.\n", 
+			ppcdev_device_name);
 
 	return 0;
 }
 
-static void __exit ppcdev_cleanup(void)
+static void __exit ppcdev_module_cleanup(void)
 {
-	cdev_del(&ppcdev.cdev);
-	unregister_chrdev_region(dev_num, dev_elements);
-	printk(KERN_INFO "Cleaning up %s module.\n", device_name);
+	ppcdev_cleanup();
 }
 
-module_init(ppcdev_init);
-module_exit(ppcdev_cleanup);
+module_init(ppcdev_module_init);
+module_exit(ppcdev_module_cleanup);

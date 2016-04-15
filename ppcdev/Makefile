@@ -1,3 +1,5 @@
+CONFIG_MODULE_SIG=n
+
 MAKE=$(shell which make)
 
 obj-m = ppcdev.o
