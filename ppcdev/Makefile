@@ -1,11 +1,30 @@
-CONFIG_MODULE_SIG=n
+MAKE		= $(shell which make)
+MKDIR		= $(shell which mkdir)
+RM		= $(shell which rm)
+CP		= $(shell which cp)
 
-MAKE=$(shell which make)
+TARGET_DIRS 	= module user
+OUTPUT_DIR	= output
 
-obj-m = ppcdev.o
+all: create_output build_dirs
 
-all: clean
-	$(MAKE) -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules	
+build_dirs:
+	for dir in $(TARGET_DIRS); do \
+		cd $$dir && $(MAKE) ; \
+		cd .. ; \
+	done
 
-clean:
-	$(MAKE) -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean 
+clean_dirs:
+	for dir in $(TARGET_DIRS); do \
+		cd $$dir && $(MAKE) clean ; \
+		cd .. ; \
+	done
+
+clean: clean_output clean_dirs
+
+create_output:
+	[ -d $(OUTPUT_DIR) ] || $(MKDIR) $(OUTPUT_DIR)
+
+clean_output:
+	$(RM) -rf $(OUTPUT_DIR)	
+

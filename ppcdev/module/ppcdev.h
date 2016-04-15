@@ -1,6 +1,7 @@
 #ifndef PPCDEV_H
 #define PPCDEV_H
 
+#ifdef __KERNEL__
 #include <linux/cdev.h>
 #include <linux/atomic.h>
 
@@ -10,5 +11,6 @@ typedef struct ppcdev_s {
 } ppcdev_t;
 
 extern ppcdev_t ppcdev;
+#endif // __KERNEL__
 
-#endif
+#endif // PPCDEV_H

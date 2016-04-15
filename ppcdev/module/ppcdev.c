@@ -70,7 +70,7 @@ static int ppcdev_setup(ppcdev_t *dev, dev_t major) {
 	dev->cdev.owner = THIS_MODULE;
 	dev->cdev.ops = &ppcdev_fops;
 
-	return cdev_add(&dev->cdev, major, 1);
+	return cdev_add(&dev->cdev, MKDEV(major, 0), 1);
 }
 
 static void ppcdev_cleanup(void) {
