@@ -22,6 +22,20 @@ static dev_t dev_num = 0;
 ppcdev_t ppcdev;	
 
 static int ppcdev_fops_open(struct inode *inode, struct file *filp) {
+	ppcdev_t *dev = container_of(inode->i_cdev, ppcdev_t, cdev);
+	if (dev) {
+		int refcnt = 0;
+		filp->private_data = dev;
+
+		if ((refcnt = atomic_read(&dev->refcnt)) != 0) {
+			printk(KERN_ERR "[PPDEV] open device %s failed, refcnt=%d\n", ppcdev_device_name, refcnt);
+			return -EBUSY;
+		}
+
+		refcnt = atomic_inc_return(&dev->refcnt);
+		printk(KERN_INFO "[PPDEV] device %s is opened, refcnt=%d\n", ppcdev_device_name, refcnt);
+	}
+
 	return 0;
 }
 
@@ -34,6 +48,12 @@ static ssize_t ppcdev_fops_write(struct file *fp, const char *buff, size_t lengt
 }
 
 static int ppcdev_fops_release(struct inode *inode, struct file *filp) {
+	ppcdev_t *dev = container_of(inode->i_cdev, ppcdev_t, cdev);
+	if (dev) {
+		int refcnt = atomic_dec_return(&dev->refcnt);
+		printk(KERN_INFO "[PPDEV] device %s is released, refcnt=%d\n", ppcdev_device_name, refcnt);
+	}
+
 	return 0;
 }
 
