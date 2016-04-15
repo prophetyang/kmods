@@ -124,6 +124,9 @@ static int __init ppcdev_module_init(void)
 	}
 
 	if ((rc = ppcdev_setup(&ppcdev, ppcdev_device_major)) < 0) {
+		device_destroy(ppcdev_class, dev_num);
+		class_destroy(ppcdev_class);
+		unregister_chrdev_region(dev_num, ppcdev_max_devices);
 		printk(KERN_ERR "[PPDEV] device %s setup failed: rc=%d\n", ppcdev_device_name, rc);
 		return rc;
 	}
