@@ -14,7 +14,15 @@ MODULE_NAME = ppcdev
 
 obj-m = $(MODULE_NAME).o
 
-all: clean $(MODULE_NAME) install
+$(MODULE_NAME)-objs += ppcdev_module.o
+$(MODULE_NAME)-objs += ppcdev_dev.o
+$(MODULE_NAME)-objs += ppcdev_fops.o
+$(MODULE_NAME)-objs += ppcdev_ioctl.o
+$(MODULE_NAME)-objs += ppcdev_event.o
+$(MODULE_NAME)-objs += ppcdev_queue.o
+$(MODULE_NAME)-objs += ppcdev_proc.o
+
+all: $(MODULE_NAME) install
 
 $(MODULE_NAME):
 	$(MAKE) -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules

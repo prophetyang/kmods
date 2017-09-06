@@ -3,7 +3,7 @@ RM		= $(shell which rm)
 CP		= $(shell which cp)
 
 MODULE_DIR	= ../module
-CFLAGS		= -I$(MODULE_DIR) -g
+CFLAGS		= -I$(MODULE_DIR) -g -DUSE_IOCTL
 
 PPCDEV_USER	= ppcdev_user
 PPCDEV_USER_OBJS	= ppcdev_user.o
@@ -21,4 +21,4 @@ install: $(PPCDEV_USER)
 	$(CC) $(CFLAGS) -c $<
 
 clean:
-	$(RM) -f *.o $(PPCDEV_USER)
+	@$(RM) -f *.o $(PPCDEV_USER)
